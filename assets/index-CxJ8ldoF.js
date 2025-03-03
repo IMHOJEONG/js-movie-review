@@ -95,11 +95,11 @@ const AppHeader = () => {
       <div class="overlay" aria-hidden="true"></div>
       <div class="top-rated-container">
         <h1 class="logo">
-          <img src="../../images/logo.png" alt="MovieList" />
+          <img src="logo.png" alt="MovieList" />
         </h1>
         <div class="top-rated-movie">
           <div class="rate">
-            <img src="../../templates/images/star_empty.png" class="star" />
+            <img src="star_empty.png" class="star" />
             <span class="rate-value">9.5</span>
           </div>
           <div class="title">인사이드 아웃2</div>
@@ -137,7 +137,7 @@ https://media.themoviedb.org/t/p/w440_and_h660_face${posterPath}"
                 />
                 <div class="item-desc">
                   <p class="rate">
-                    <img src="./images/star_empty.png" class="star" />
+                    <img src="star_empty.png" class="star" />
                     <span>7.7</span>
                   </p>
                   <strong>${title}</strong>
