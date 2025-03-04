@@ -50,6 +50,28 @@ const AppFooter = () => {
   render();
   return container;
 };
+const getFavoriteMovies = async (index = 1) => {
+  const url = `https://api.themoviedb.org/3/movie/popular?language=ko-KR&page=${index}`;
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${void 0}`
+    }
+  });
+  const data = await response.json();
+  return data;
+};
+const getTopRatedMovies = async () => {
+  const url = `https://api.themoviedb.org/3/movie/top_rated?language=ko-KR&page=1`;
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${void 0}`
+    }
+  });
+  const data = await response.json();
+  return data;
+};
 const handler = {
   listeners: [],
   set(target, key, value) {
@@ -80,30 +102,53 @@ const state = (initialState) => {
   return { value: innerState, ...handler };
 };
 const AppHeader = () => {
-  const { value: headerState, subscribe } = state(true);
-  const handleClick = () => {
-    headerState.value = !headerState.value;
+  const { value: headerState, subscribe } = state([]);
+  const getResponse = async () => {
+    const response = await getTopRatedMovies();
+    return response;
   };
+  (async () => {
+    const data = await getResponse();
+    const { results } = data;
+    headerState.value = results;
+  })();
   const container = document.createDocumentFragment();
   const header = document.createElement("header");
-  header.addEventListener("click", handleClick);
   container.appendChild(header);
   const render = () => {
+    var _a, _b;
+    console.log(headerState.value);
     header.innerHTML = /* html */
     `
     <div class="background-container">
-      <div class="overlay" aria-hidden="true"></div>
+    ${(_a = headerState.value) == null ? void 0 : _a.slice(0, 1).map((result) => {
+      const { poster_path: posterPath } = result;
+      return (
+        /* html */
+        `<div class="overlay" aria-hidden="true"
+          style="background-image:url('https://media.themoviedb.org/t/p/w1920_and_h1080_face${posterPath}')"
+        ></div>`
+      );
+    }).join("")}
+
       <div class="top-rated-container">
         <h1 class="logo">
           <img src="logo.png" alt="MovieList" />
         </h1>
         <div class="top-rated-movie">
-          <div class="rate">
-            <img src="star_empty.png" class="star" />
-            <span class="rate-value">9.5</span>
-          </div>
-          <div class="title">인사이드 아웃2</div>
-          <button class="primary detail">자세히 보기</button>
+          
+        ${(_b = headerState.value) == null ? void 0 : _b.slice(0, 1).map((result) => {
+      const { title, vote_average: voteAverage } = result;
+      return (
+        /* html */
+        `<div class="rate">
+          <img src="star_empty.png" class="star" />
+          <span class="rate-value">${voteAverage}</span>
+        </div>
+        <div class="title">${title}</div>
+        <button class="primary detail">자세히 보기</button>`
+      );
+    }).join("")}
         </div>
       </div>
     </div>
@@ -150,17 +195,6 @@ https://media.themoviedb.org/t/p/w440_and_h660_face${posterPath}"
   };
   render();
   return container.querySelector("div").innerHTML;
-};
-const getFavoriteMovies = async (index = 1) => {
-  const url = `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${index}`;
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkNDhkMDg4NzU4MmI4NjY2NDMwMTQwZjRkODk3NTc3MiIsIm5iZiI6MTU0MzIzODEwMC42NTY5OTk4LCJzdWIiOiI1YmZiZjFkNDkyNTE0MTEzMjkwMGRmOGYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.7RInpLgb8h4m-d_7UfWp89EaaZIw4CUBxQLq4vKUjGs"}`
-    }
-  });
-  const data = await response.json();
-  return data;
 };
 const MainTabs = () => {
   const container = document.createDocumentFragment();
