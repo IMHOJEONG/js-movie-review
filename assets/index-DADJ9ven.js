@@ -55,7 +55,7 @@ const getFavoriteMovies = async (index = 1) => {
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${void 0}`
+      Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkNDhkMDg4NzU4MmI4NjY2NDMwMTQwZjRkODk3NTc3MiIsIm5iZiI6MTU0MzIzODEwMC42NTY5OTk4LCJzdWIiOiI1YmZiZjFkNDkyNTE0MTEzMjkwMGRmOGYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.7RInpLgb8h4m-d_7UfWp89EaaZIw4CUBxQLq4vKUjGs"}`
     }
   });
   const data = await response.json();
@@ -66,7 +66,7 @@ const getTopRatedMovies = async () => {
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${void 0}`
+      Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkNDhkMDg4NzU4MmI4NjY2NDMwMTQwZjRkODk3NTc3MiIsIm5iZiI6MTU0MzIzODEwMC42NTY5OTk4LCJzdWIiOiI1YmZiZjFkNDkyNTE0MTEzMjkwMGRmOGYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.7RInpLgb8h4m-d_7UfWp89EaaZIw4CUBxQLq4vKUjGs"}`
     }
   });
   const data = await response.json();
