@@ -58,7 +58,7 @@ const getTopRatedMovies = async () => {
   return results;
 };
 const getMovieDetail = async (movieId = "") => {
-  const url = `https://api.themoviedb.org/3/movie/${movieId}`;
+  const url = `https://api.themoviedb.org/3/movie/${movieId}?language=ko-KR`;
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
@@ -117,7 +117,7 @@ const MyStarScoreComponent = (movieId) => {
                 <div class="starScores">
                     ${Array.from({ length: 5 }).fill(0).map((val, index) => {
         const starScore = (index + 1) * 2;
-        return `<img src="${scoreState.value >= starScore ? "./images/star_filled.png" : "./images/star_empty.png"}" class="star" data-score="${starScore}">`;
+        return `<img src="${scoreState.value >= starScore ? "star_filled.png" : "star_empty.png"}" class="star" data-score="${starScore}">`;
       }).join("")}  <span class="score">${scoreState.value}</span>
                 </div>
                 
@@ -165,7 +165,7 @@ const AppDetail = () => {
                 <div class="modal-background ${detailState.value ? "active" : ""}" id="modalBackground">
                     <div class="modal">
                         <button class="close-modal" id="closeModal">
-                        <img src="./images/modal_button_close.png" />
+                        <img src="modal_button_close.png" />
                         </button>
                         <div class="modal-container">
                             <div class="modal-image">
@@ -179,7 +179,7 @@ const AppDetail = () => {
                                 ${release_date} · ${genres == null ? void 0 : genres.map((genre) => genre.name).join(",")}
                                 </p>
                                 <p class="rate">
-                                <img src="./images/star_filled.png" class="star" /><span
+                                <img src="star_filled.png" class="star" /><span
                                     >${vote_average}</span
                                 >
                                 </p>
