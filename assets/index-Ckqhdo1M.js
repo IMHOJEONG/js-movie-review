@@ -57,6 +57,17 @@ const getTopRatedMovies = async () => {
   const { results } = await response.json();
   return results;
 };
+const getSearchMovie = async (query = "", index = 1) => {
+  const url = `https://api.themoviedb.org/3/search/movie?language=ko-KR&page=1&query=${query}&page=${index}`;
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkNDhkMDg4NzU4MmI4NjY2NDMwMTQwZjRkODk3NTc3MiIsIm5iZiI6MTU0MzIzODEwMC42NTY5OTk4LCJzdWIiOiI1YmZiZjFkNDkyNTE0MTEzMjkwMGRmOGYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.7RInpLgb8h4m-d_7UfWp89EaaZIw4CUBxQLq4vKUjGs"}`
+    }
+  });
+  const { results } = await response.json();
+  return results;
+};
 const getMovieDetail = async (movieId = "") => {
   const url = `https://api.themoviedb.org/3/movie/${movieId}?language=ko-KR`;
   const response = await fetch(url, {
@@ -91,6 +102,11 @@ const createRenderer = () => {
   };
 };
 const renderer = createRenderer();
+const replaceNewContainer = (rootContainer, render) => {
+  const newContainer = render();
+  rootContainer.replaceWith(newContainer);
+  return newContainer;
+};
 const toElement = (htmlString) => {
   const div = document.createElement("div");
   div.innerHTML = htmlString.trim();
@@ -103,14 +119,18 @@ const getMovieStarScore = (movieId) => {
   const value = localStorage.getItem(movieId);
   if (value) {
     return value;
-  } else {
-    setMovieStarScore(movieId, 0);
-    const value2 = localStorage.getItem(movieId);
-    return value2;
   }
+  setMovieStarScore(movieId, 0);
+  return value;
 };
 const MyStarScoreComponent = (movieId) => {
   const [scoreState, setScoreState] = renderer.state("my-star-score", getMovieStarScore(movieId) ?? 0);
+  const handleStarScoreBox = (e) => {
+    if (e.target.tagName === "IMG") {
+      setScoreState(e.target.dataset.score);
+      setMovieStarScore(movieId, e.target.dataset.score);
+    }
+  };
   const render = () => {
     const container = toElement(
       `<div>
@@ -125,20 +145,12 @@ const MyStarScoreComponent = (movieId) => {
             `
     );
     const starScoreBox = container.querySelector(".starScores");
-    starScoreBox.addEventListener("click", (e) => {
-      if (e.target.tagName === "IMG") {
-        console.log(e.target, e.target.dataset.score);
-        setScoreState(e.target.dataset.score);
-        setMovieStarScore(movieId, e.target.dataset.score);
-      }
-    });
+    starScoreBox.addEventListener("click", handleStarScoreBox);
     return container;
   };
   let rootContainer = render();
   eventEmitter.addEventListener("my-star-score", () => {
-    const newContainer = render();
-    rootContainer.replaceWith(newContainer);
-    rootContainer = newContainer;
+    rootContainer = replaceNewContainer(rootContainer, render);
   });
   return rootContainer;
 };
@@ -205,7 +217,6 @@ const AppDetail = () => {
     const scoreBox = container.querySelector(".my-score-box");
     scoreBox.appendChild(MyStarScoreComponent(id));
     closeButton.addEventListener("click", () => {
-      console.log("CLOSED!", detailState.value);
       setDetailState(false);
       const newContainer = render();
       rootContainer.replaceWith(newContainer);
@@ -217,21 +228,15 @@ const AppDetail = () => {
   eventEmitter.addEventListener("app-detail-info", (event) => {
     fetchData(event.detail.id);
     setDetailState(!detailState.value);
-    const newContainer = render();
-    rootContainer.replaceWith(newContainer);
-    rootContainer = newContainer;
+    rootContainer = replaceNewContainer(rootContainer, render);
   });
   eventEmitter.addEventListener("app-detail-data", () => {
-    const newContainer = render();
-    rootContainer.replaceWith(newContainer);
-    rootContainer = newContainer;
+    rootContainer = replaceNewContainer(rootContainer, render);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && detailState.value) {
       setDetailState(false);
-      const newContainer = render();
-      rootContainer.replaceWith(newContainer);
-      rootContainer = newContainer;
+      rootContainer = replaceNewContainer(rootContainer, render);
     }
   });
   return rootContainer;
@@ -302,9 +307,7 @@ const AppHeader = ({ setInputState }) => {
   };
   let rootContainer = render();
   eventEmitter.addEventListener("app-header", () => {
-    const newContainer = render();
-    rootContainer.replaceWith(newContainer);
-    rootContainer = newContainer;
+    rootContainer = replaceNewContainer(rootContainer, render);
   });
   return rootContainer;
 };
@@ -366,12 +369,10 @@ const ThumbnailList = (list) => {
   let rootContainer = render();
   return rootContainer;
 };
-const callback = (entries, observer) => {
+const callback = (entries, observer, fn) => {
   entries.forEach((entry) => {
     if (entry.isIntersecting && entry.intersectionRatio > 0) {
-      console.log("Element is in view");
-    } else {
-      console.log("Element is out of view");
+      fn();
     }
   });
 };
@@ -382,11 +383,15 @@ const options = {
   threshold: 0
   // Trigger when 50% of the target is visible
 };
-new IntersectionObserver(callback, options);
 const AppMain = ({ inputState }) => {
   const [mainState, setState] = renderer.state("app-main", []);
   const [pageState, setPageState] = renderer.state("---", 1);
   const fetchData = async (page) => {
+    if (inputState.value !== "") {
+      const movies = await getSearchMovie(inputState.value, page);
+      setState([...mainState.value, ...movies]);
+      return;
+    }
     const data = await getFavoriteMovies(page);
     setState([...mainState.value, ...data]);
   };
@@ -412,35 +417,27 @@ const AppMain = ({ inputState }) => {
     inputElement == null ? void 0 : inputElement.addEventListener("click", handleClick);
     const sectionElement = container.querySelector("section");
     sectionElement.firstChild.replaceWith(ThumbnailList(mainState.value));
-    const callback2 = (entries, observer2) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && entry.intersectionRatio > 0) {
-          if (inputState.value !== "" || pageState.value >= 3) {
-            return;
-          }
+    const observer = new IntersectionObserver(
+      (entries, observer2) => callback(
+        entries,
+        observer2,
+        () => {
           setPageState(pageState.value + 1);
           fetchData(pageState.value);
         }
-      });
-    };
-    const observer = new IntersectionObserver(callback2, options);
+      ),
+      options
+    );
     observer.observe(container.querySelector(".more"));
     return container;
   };
   let rootContainer = render();
   eventEmitter.addEventListener("app-main", () => {
-    console.log(mainState.value);
-    const newContainer = render();
-    rootContainer.replaceWith(newContainer);
-    rootContainer = newContainer;
+    rootContainer = replaceNewContainer(rootContainer, render);
   });
   async function handleInputAsync() {
-    const data = await getFavoriteMovies(1);
-    const movies = [...data].filter(
-      (movie) => movie.title.includes(inputState.value)
-    );
-    console.log("INPUT STATE : ", inputState.value, mainState.value, movies);
-    setState([...movies]);
+    const movies = await getSearchMovie(inputState.value);
+    setState(movies);
   }
   eventEmitter.addEventListener("app-input", () => {
     handleInputAsync();
