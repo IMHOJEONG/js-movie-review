@@ -80,28 +80,26 @@ const getMovieDetail = async (movieId = "") => {
   return data;
 };
 const eventEmitter = new EventTarget();
-const createRenderer = () => {
-  return {
-    state(key, initialState) {
-      const initState = {
-        value: initialState
-      };
-      const handler = {
-        set(target, prop, value) {
-          target[prop] = value;
-          eventEmitter.dispatchEvent(new CustomEvent(key));
-          return true;
-        }
-      };
-      const proxyState = new Proxy(initState, handler);
-      const setState = (newValue) => {
-        proxyState.value = newValue;
-      };
-      return [proxyState, setState];
-    }
-  };
-};
-const renderer = createRenderer();
+const createStateManager = () => ({
+  state(key, initialState) {
+    const initState = {
+      value: initialState
+    };
+    const handler = {
+      set(target, prop, value) {
+        target[prop] = value;
+        eventEmitter.dispatchEvent(new CustomEvent(key));
+        return true;
+      }
+    };
+    const proxyState = new Proxy(initState, handler);
+    const setState = (newValue) => {
+      proxyState.value = newValue;
+    };
+    return [proxyState, setState];
+  }
+});
+const stateManager = createStateManager();
 const replaceNewContainer = (rootContainer, render) => {
   const newContainer = render();
   rootContainer.replaceWith(newContainer);
@@ -124,7 +122,10 @@ const getMovieStarScore = (movieId) => {
   return value;
 };
 const MyStarScoreComponent = (movieId) => {
-  const [scoreState, setScoreState] = renderer.state("my-star-score", getMovieStarScore(movieId) ?? 0);
+  const [scoreState, setScoreState] = stateManager.state(
+    "my-star-score",
+    getMovieStarScore(movieId) ?? 0
+  );
   const handleStarScoreBox = (e) => {
     if (e.target.tagName === "IMG") {
       setScoreState(e.target.dataset.score);
@@ -155,8 +156,8 @@ const MyStarScoreComponent = (movieId) => {
   return rootContainer;
 };
 const AppDetail = () => {
-  const [detailState, setDetailState] = renderer.state("app-detail", false);
-  const [detailData, setDetailData] = renderer.state("app-detail-data", {});
+  const [detailState, setDetailState] = stateManager.state("app-detail", false);
+  const [detailData, setDetailData] = stateManager.state("app-detail-data", {});
   const fetchData = async (movieId) => {
     const data = await getMovieDetail(movieId);
     setDetailData({ ...data });
@@ -166,13 +167,12 @@ const AppDetail = () => {
       id,
       title,
       genres,
-      release_date,
-      backdrop_path,
-      vote_average,
+      release_date: releaseDate,
+      backdrop_path: backdropPath,
+      vote_average: voteAverage,
       overview
     } = detailData.value;
-    const container = toElement(
-      `
+    const container = toElement(`
             <div>
                 <div class="modal-background ${detailState.value ? "active" : ""}" id="modalBackground">
                     <div class="modal">
@@ -182,17 +182,17 @@ const AppDetail = () => {
                         <div class="modal-container">
                             <div class="modal-image">
                                 <img
-                                src="https://image.tmdb.org/t/p/original${backdrop_path ?? ""}"
+                                src="https://image.tmdb.org/t/p/original${backdropPath ?? ""}"
                                 />
                             </div>
                             <div class="modal-description">
                                 <h2>${title}</h2>
                                 <p class="category">
-                                ${release_date} · ${genres == null ? void 0 : genres.map((genre) => genre.name).join(",")}
+                                ${releaseDate} · ${genres == null ? void 0 : genres.map((genre) => genre.name).join(",")}
                                 </p>
                                 <p class="rate">
                                 <img src="star_filled.png" class="star" /><span
-                                    >${vote_average}</span
+                                    >${voteAverage}</span
                                 >
                                 </p>
                                 <hr />
@@ -211,16 +211,13 @@ const AppDetail = () => {
                     </div>
                 </div>
             </div>
-            `
-    );
+            `);
     const closeButton = container.querySelector(".close-modal");
     const scoreBox = container.querySelector(".my-score-box");
     scoreBox.appendChild(MyStarScoreComponent(id));
     closeButton.addEventListener("click", () => {
       setDetailState(false);
-      const newContainer = render();
-      rootContainer.replaceWith(newContainer);
-      rootContainer = newContainer;
+      rootContainer = replaceNewContainer(rootContainer, render);
     });
     return container;
   };
@@ -263,7 +260,7 @@ const TopRatedMovieInfo = (topRatedMovie) => topRatedMovie == null ? void 0 : to
   );
 }).join("");
 const AppHeader = ({ setInputState }) => {
-  const [headerState, setState] = renderer.state("app-header", []);
+  const [headerState, setState] = stateManager.state("app-header", []);
   const fetchData = async () => {
     const data = await getTopRatedMovies();
     setState(data);
@@ -298,7 +295,6 @@ const AppHeader = ({ setInputState }) => {
       if (e.code === "Enter") {
         e.preventDefault();
         setInputState(e.target.value);
-        console.log(e.target.value);
       }
     };
     const inputElement = container.querySelector(".search");
@@ -310,6 +306,20 @@ const AppHeader = ({ setInputState }) => {
     rootContainer = replaceNewContainer(rootContainer, render);
   });
   return rootContainer;
+};
+const callback = (entries, observer, fn) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting && entry.intersectionRatio > 0) {
+      fn();
+    }
+  });
+};
+const options = {
+  root: null,
+  // Use the viewport as the root
+  rootMargin: "0px 0px -50px 0px",
+  threshold: 0
+  // Trigger when 50% of the target is visible
 };
 const Movie = ({ id, title, posterPath, voteAverage }) => {
   const render = () => {
@@ -332,7 +342,7 @@ https://media.themoviedb.org/t/p/w440_and_h660_face${posterPath}"
             </li>`);
     return container;
   };
-  let rootContainer = render();
+  const rootContainer = render();
   return rootContainer;
 };
 const ThumbnailList = (list) => {
@@ -366,26 +376,12 @@ const ThumbnailList = (list) => {
     container.addEventListener("click", handleDetail);
     return container;
   };
-  let rootContainer = render();
+  const rootContainer = render();
   return rootContainer;
 };
-const callback = (entries, observer, fn) => {
-  entries.forEach((entry) => {
-    if (entry.isIntersecting && entry.intersectionRatio > 0) {
-      fn();
-    }
-  });
-};
-const options = {
-  root: null,
-  // Use the viewport as the root
-  rootMargin: "0px 0px -50px 0px",
-  threshold: 0
-  // Trigger when 50% of the target is visible
-};
 const AppMain = ({ inputState }) => {
-  const [mainState, setState] = renderer.state("app-main", []);
-  const [pageState, setPageState] = renderer.state("---", 1);
+  const [mainState, setState] = stateManager.state("app-main", []);
+  const [pageState, setPageState] = stateManager.state("---", 1);
   const fetchData = async (page) => {
     if (inputState.value !== "") {
       const movies = await getSearchMovie(inputState.value, page);
@@ -417,18 +413,14 @@ const AppMain = ({ inputState }) => {
     inputElement == null ? void 0 : inputElement.addEventListener("click", handleClick);
     const sectionElement = container.querySelector("section");
     sectionElement.firstChild.replaceWith(ThumbnailList(mainState.value));
-    const observer = new IntersectionObserver(
-      (entries, observer2) => callback(
-        entries,
-        observer2,
-        () => {
-          setPageState(pageState.value + 1);
-          fetchData(pageState.value);
-        }
-      ),
+    const observerObject = new IntersectionObserver(
+      (entries, observer) => callback(entries, observer, () => {
+        setPageState(pageState.value + 1);
+        fetchData(pageState.value);
+      }),
       options
     );
-    observer.observe(container.querySelector(".more"));
+    observerObject.observe(container.querySelector(".more"));
     return container;
   };
   let rootContainer = render();
@@ -446,7 +438,7 @@ const AppMain = ({ inputState }) => {
 };
 window.addEventListener("load", () => {
   const app = document.querySelector("#app");
-  const [inputState, setInputState] = renderer.state("app-input", "");
+  const [inputState, setInputState] = stateManager.state("app-input", "");
   const AppHeaderComponent = AppHeader({
     setInputState
   });
